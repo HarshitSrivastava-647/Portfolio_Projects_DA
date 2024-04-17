@@ -1,0 +1,229 @@
+--SELCTING COMPLETE TABLE TO GET AN OVERVIEW OF DATA
+
+				SELECT * FROM CovidDeaths
+				WHERE continent IS NOT NULL
+				ORDER BY 3,4;
+
+--SELECTING DATA OF OUR CONCERN
+
+				SELECT LOCATION,DATE,total_cases,new_cases,total_deaths,new_deaths 
+				FROM CovidDeaths
+				WHERE continent IS NOT NULL
+				ORDER BY LOCATION, DATE;
+
+--FINDING FATALITY RATE OF INFECTED PEOPLE COUNTRYWISE
+
+				SELECT LOCATION,DATE,TOTAL_CASES,TOTAL_DEATHS, (total_deaths/total_cases)*100 DEATH_RATE
+				FROM CovidDeaths
+				WHERE continent IS NOT NULL
+				ORDER BY LOCATION,DATE;
+
+--CHANCES OF DEATH OF A PATIENT GETTING INFECTED FROM COVID IN INDIA
+				SELECT LOCATION,DATE,TOTAL_CASES,TOTAL_DEATHS, (total_deaths/total_cases)*100 DEATH_RATE
+				FROM CovidDeaths WHERE LOCATION = 'INDIA' AND
+				continent IS NOT NULL
+				ORDER BY LOCATION,DATE;
+
+--CHANCES OF DEATH OF A PATIENT GETTING INFECTED FROM COVID IN US AND CHINA
+
+				SELECT LOCATION,DATE,TOTAL_CASES,TOTAL_DEATHS, (total_deaths/total_cases)*100 DEATH_RATE
+				FROM CovidDeaths WHERE LOCATION IN ('UNITED STATES','CHINA')
+				AND continent IS NOT NULL
+				ORDER BY LOCATION,DATE;
+
+--FINDING PERCENTAGE OF POPULATION INFECTED BY COVID IN INDIA
+				SELECT LOCATION,DATE,TOTAL_CASES,POPULATION, (total_cases/POPULATION)*100 INFECTED_POPULATION_RATE
+				FROM CovidDeaths WHERE LOCATION = 'INDIA'
+				AND continent IS NOT NULL
+				ORDER BY LOCATION,DATE;
+
+--FINDING PERCENTAGE OF POPULATION INFECTED BY COVID IN UNITED STATES AND CHINA
+
+				SELECT LOCATION,DATE,TOTAL_CASES,POPULATION, (total_cases/POPULATION)*100 INFECTED_POPULATION_RATE
+				FROM CovidDeaths WHERE LOCATION = 'UNITED STATES'
+				AND continent IS NOT NULL
+				ORDER BY LOCATION,DATE;
+
+				SELECT LOCATION,DATE,TOTAL_CASES,POPULATION, (total_cases/POPULATION)*100 INFECTED_POPULATION_RATE
+				FROM CovidDeaths WHERE LOCATION = 'CHINA'
+				AND continent IS NOT NULL
+				ORDER BY LOCATION,DATE;
+
+--LISTING COUNTRIES FROM HIGHEST TO LOWEST POPULATION INFECTION RATE
+
+				SELECT LOCATION,DATE,TOTAL_CASES,POPULATION, (total_cases/POPULATION)*100  INFECTION_RATE
+				FROM CovidDeaths WHERE DATE = '04-30-2021' AND
+				continent IS NOT NULL
+				ORDER BY INFECTION_RATE DESC;
+
+--OR ANOTHER WAY
+
+				SELECT LOCATION, MAX(TOTAL_CASES) TOTAL_CASE_RECORDED ,POPULATION, MAX((TOTAL_CASES/POPULATION)*100) INFECTION_RATE
+				FROM CovidDeaths
+				WHERE continent IS NOT NULL
+				GROUP BY LOCATION,POPULATION
+				ORDER BY INFECTION_RATE DESC;
+
+--FINDING MAX FATALIT COUNT COUNTRYWISE
+
+				SELECT LOCATION, MAX(CAST(total_deaths AS INT)) AS MAXTOTAL_DEATH    -- Since originally totaldeath column is char type so we are casting it to int type
+				FROM CovidDeaths
+				WHERE continent IS NOT NULL
+				GROUP BY LOCATION
+				ORDER BY MAXTOTAL_DEATH DESC;
+
+
+--LISTING COUNTRIES FROM HIGHEST TO LOWEST FATALITY RATE
+
+				SELECT LOCATION, MAX(CAST(total_deaths AS INT)) TOTAL_DEATHS_RECORDED ,POPULATION, MAX(((CAST(total_deaths AS INT))/POPULATION)*100) FATALITY_RATE
+				FROM CovidDeaths
+				WHERE continent IS NOT NULL
+				GROUP BY LOCATION,POPULATION
+				ORDER BY FATALITY_RATE DESC;
+
+--ANALYZING DATA CONTINENT WISE
+
+				SELECT CONTINENT, MAX(total_cases) TOTAL_CASES_IN_CONTINENT
+				FROM CovidDeaths
+				WHERE continent IS NOT NULL
+				GROUP BY CONTINENT
+				ORDER BY  TOTAL_CASES_IN_CONTINENT DESC;
+
+--FINDING TOTAL FATALITY IN EACH CONTINENT
+				SELECT LOCATION, MAX(CAST(TOTAL_DEATHS AS INT)) AS TOTAL_FATALITY
+				FROM CovidDeaths
+				WHERE CONTINENT IS NULL
+				GROUP BY LOCATION
+				ORDER BY TOTAL_FATALITY desc;
+
+
+--FINDING FATALITY RATE CONTINENT WISE
+
+				SELECT LOCATION,MAX(total_cases) TOTAL_CASES_IN_CONTINENT,MAX(CAST(total_deaths AS INT)) TOTAL_DEATHS_IN_CONTINENT,
+				MAX(CAST(total_deaths AS INT))/MAX(total_cases)*100 FATALITY_RATE
+				FROM CovidDeaths
+				WHERE continent IS NULL
+				GROUP BY LOCATION
+				ORDER BY  FATALITY_RATE DESC;
+
+				--SELECT max(total_cases),MAX(CAST(total_deaths AS INT)),location,continent
+				--FROM CovidDeaths
+				--WHERE CONTINENT = 'Oceania'
+				--group by location,continent
+				--order by location;
+
+
+--CHECKING DATA GLOBALLY
+
+--PERCENTAGE OF FATALITY PER RECORDED CASE ON BASIS OF DATE
+
+				SELECT DATE, SUM(NEW_CASES) TOTAL_GLOBAL_CASES
+				,SUM(CAST(NEW_DEATHS AS INT)) TOTAL_GLOBAL_FATALITY,
+				(SUM(CAST(NEW_DEATHS AS INT)))/SUM(NEW_CASES)*100 GLOBAL_FATALITY_RATE
+				FROM CovidDeaths 
+				WHERE continent IS NOT NULL
+				GROUP BY DATE
+				ORDER BY DATE;
+
+--TOTAL GLOBAL FATALITY RATE
+
+				SELECT SUM(NEW_CASES) TOTAL_GLOBAL_CASES
+				,SUM(CAST(NEW_DEATHS AS INT)) TOTAL_GLOBAL_FATALITY,
+				(SUM(CAST(NEW_DEATHS AS INT)))/SUM(NEW_CASES)*100 GLOBAL_FATALITY_RATE
+				FROM CovidDeaths 
+				WHERE continent IS NOT NULL;
+
+
+--VIEWING VACINATION TABLE
+
+				SELECT * FROM CovidVaccinations
+
+				SELECT CD.LOCATION,CD.DATE,CD.total_cases,CD.total_deaths,CV.new_vaccinations
+				FROM CovidDeaths CD INNER JOIN CovidVaccinations CV
+				ON CD.DATE = CV.DATE AND CD.location = CV.location
+				ORDER BY CD.location,CD.DATE;
+
+--FINDING NUMBER OF PEOPLE VACCINATED TILL GIVEN DATE IN EACH COUNTRY
+
+				SELECT CD.LOCATION,CD.DATE,CD.total_cases,CD.total_deaths,CV.new_vaccinations
+				,sum(CONVERT(INT,CV.NEW_VACCINATIONS))  OVER(PARTITION BY CD.LOCATION ORDER BY CD.LOCATION,CD.DATE) Total_people_vaccinated
+				FROM CovidDeaths CD INNER JOIN CovidVaccinations CV
+				ON CD.DATE = CV.DATE AND CD.location = CV.location
+				WHERE CD.continent IS NOT NULL
+				ORDER BY CD.location,CD.DATE;
+
+
+--PERCENTAGE OF PEOPLE VACCINATED PER DAY IN EACH COUNTRY (USING CTE {COMMON TABLE EXPRESSION})
+
+				WITH CTE_VACC_PER_DAY
+				AS
+				(
+				SELECT CD.LOCATION,CD.DATE,CD.population,CV.new_vaccinations
+				,sum(CONVERT(INT,CV.NEW_VACCINATIONS))  OVER(PARTITION BY CD.LOCATION ORDER BY CD.LOCATION,CD.DATE) Total_people_vaccinated
+				FROM CovidDeaths CD INNER JOIN CovidVaccinations CV
+				ON CD.DATE = CV.DATE AND CD.location = CV.location
+				WHERE CD.continent IS NOT NULL
+				--ORDER BY CD.location,CD.DATE;
+				)
+
+				SELECT * , (Total_people_vaccinated/population)*100 VACCINATION_PERCENTAGE FROM CTE_VACC_PER_DAY ORDER BY LOCATION,DATE;
+
+
+--PERCENTAGE OF PEOPLE VACCINATED PER DAY IN EACH COUNTRY (USING TEMP TABLE)
+
+				DROP TABLE IF EXISTS #TempPercentVaccinated
+
+				CREATE TABLE #TempPercentVaccinated
+				(
+				location nvarchar(220),
+				date datetime,
+				population numeric,
+				new_vaccinations numeric,
+				total_people_vaccinated numeric
+				)
+
+				INSERT INTO #TempPercentVaccinated
+				SELECT CD.LOCATION,CD.DATE,CD.population,CV.new_vaccinations
+				,sum(CONVERT(INT,CV.NEW_VACCINATIONS))  OVER(PARTITION BY CD.LOCATION ORDER BY CD.LOCATION,CD.DATE) Total_people_vaccinated
+				FROM CovidDeaths CD INNER JOIN CovidVaccinations CV
+				ON CD.DATE = CV.DATE AND CD.location = CV.location
+				WHERE CD.continent IS NOT NULL
+				ORDER BY CD.location,CD.DATE;
+
+
+				SELECT * , (Total_people_vaccinated/population)*100 Vaccinated_Percentage FROM #TempPercentVaccinated ORDER BY LOCATION,DATE;
+
+
+--PERCENTAGE OF PEOPLE VACCINATED PER DAY IN EACH COUNTRY (USING VIEW)
+
+				CREATE VIEW TempPercentVaccinated AS
+				SELECT CD.LOCATION,CD.DATE,CD.population,CV.new_vaccinations
+				,sum(CONVERT(INT,CV.NEW_VACCINATIONS))  OVER(PARTITION BY CD.LOCATION ORDER BY CD.LOCATION,CD.DATE) Total_people_vaccinated
+				FROM CovidDeaths CD INNER JOIN CovidVaccinations CV
+				ON CD.DATE = CV.DATE AND CD.location = CV.location
+				WHERE CD.continent IS NOT NULL;
+
+				SELECT * FROM TempPercentVaccinated ORDER BY LOCATION,DATE;
+
+--TOTAL NUMBER OF PEOPLE VACCINATED IN A COUNTRY ON DATE
+
+				SELECT location,date,new_vaccinations, sum(convert(int,new_vaccinations)) over (partition by location order by location,date) total_people_vaccinated
+				FROM CovidVaccinations
+				WHERE continent IS NOT NULL
+				ORDER BY LOCATION,DATE;
+
+--CREATING VIEW TO FIND VACCINATION RATE
+
+				CREATE VIEW VACCINATION_RATE AS
+				SELECT cv.location,cv.date,cv.new_vaccinations,cd.population,
+				sum(convert(int,cv.new_vaccinations)) over (partition by cv.location order by cv.location,cv.date) total_people_vaccinated
+				FROM CovidVaccinations cv inner join CovidDeaths cd
+				on cv.location = cd.location and cv.date = cd.date
+				WHERE cv.continent IS NOT NULL;
+				--ORDER BY cv.LOCATION,cv.DATE;
+
+--QUERYING VIEW TO FIND VACCINATIN RATE IN THE COUNTRY
+
+				SELECT location,max(total_people_vaccinated)/max(population)*100
+				FROM VACCINATION_RATE
+				group by location;
